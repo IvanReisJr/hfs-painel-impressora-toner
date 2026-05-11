@@ -183,7 +183,7 @@ document.querySelectorAll('.stat-filter').forEach(card => {
     }
     // remove activeCol ao clicar em card (ordena pelo card)
     activeCol = null;
-    clearColArrows();
+    document.querySelectorAll('th.sortable').forEach(t => t.classList.remove('asc','desc'));
     document.querySelectorAll('.stat-filter').forEach(c => c.classList.remove('active'));
     if (activeFilter) card.classList.add('active');
     applyAll();
