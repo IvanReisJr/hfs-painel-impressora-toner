@@ -33,12 +33,6 @@
 <style>
 .stat-filter:hover { box-shadow: 0 0 0 2px #adb5bd; }
 .stat-filter.active { box-shadow: 0 0 0 3px #0d6efd; }
-.sortable { cursor: pointer; user-select: none; white-space: nowrap; }
-.sortable:hover { background: #e9ecef; }
-.sort-icon { opacity: .35; font-size: .75rem; margin-left: 3px; }
-.sortable.asc .sort-icon::after  { content: ' ▲'; opacity: 1; }
-.sortable.desc .sort-icon::after { content: ' ▼'; opacity: 1; }
-.sortable:not(.asc):not(.desc) .sort-icon::after { content: ' ↕'; }
 </style>
 
 <div class="card">
@@ -59,9 +53,9 @@
       <table class="table table-hover mb-0" id="printerTable">
         <thead class="table-light">
           <tr>
-            <th class="sortable" data-col="name">Impressora <span class="sort-icon"></span></th>
-            <th class="sortable" data-col="ip">IP <span class="sort-icon"></span></th>
-            <th class="sortable" data-col="local">Local <span class="sort-icon"></span></th>
+            <th>Impressora</th>
+            <th>IP</th>
+            <th>Local</th>
             <th style="width:130px">Preto</th>
             <th style="width:110px">Ciano</th>
             <th style="width:110px">Magenta</th>
@@ -133,9 +127,6 @@ function getCookie(name) {
   return document.cookie.split(';').map(c => c.trim()).find(c => c.startsWith(name + '='))?.split('=')[1] || '';
 }
 
-// prioridade de nível para ordenação
-const LEVEL_ORDER = { critical: 0, warning: 1, ok: 2, unknown: 3 };
-
 // ordem de exibição ao clicar em cada card
 const CARD_ORDER = {
   critical: { critical: 0, warning: 1, ok: 2, unknown: 3 },
@@ -143,16 +134,8 @@ const CARD_ORDER = {
   unknown:  { unknown: 0, critical: 1, warning: 2, ok: 3 },
 };
 
-// comparação de IP como 4 octetos numéricos
-function cmpIp(a, b) {
-  const toNum = ip => ip.split('.').reduce((acc, v) => acc * 256 + parseInt(v), 0);
-  return toNum(a) - toNum(b);
-}
-
 // ── estado global ─────────────────────────────────────────────────────────────
 let activeFilter = null;   // card ativo ('critical' | 'warning' | 'unknown' | null)
-let activeCol    = null;   // coluna ativa para sort
-let activeDir    = 'asc';  // direção
 
 // ── busca ─────────────────────────────────────────────────────────────────────
 const searchInput = document.getElementById('searchInput');
@@ -177,29 +160,6 @@ document.querySelectorAll('.stat-filter').forEach(card => {
   });
 });
 
-// ── colunas ordenáveis ────────────────────────────────────────────────────────
-document.querySelectorAll('th.sortable').forEach(th => {
-  th.addEventListener('click', () => {
-    const col = th.dataset.col;
-    if (activeCol === col) {
-      activeDir = activeDir === 'asc' ? 'desc' : 'asc';
-    } else {
-      activeCol = col;
-      activeDir = 'asc';
-    }
-    // desativa card ao clicar em coluna
-    activeFilter = null;
-    document.querySelectorAll('.stat-filter').forEach(c => c.classList.remove('active'));
-    clearColArrows();
-    th.classList.add(activeDir);
-    applyAll();
-  });
-});
-
-function clearColArrows() {
-  document.querySelectorAll('th.sortable').forEach(t => t.classList.remove('asc', 'desc'));
-}
-
 // ── lógica principal ──────────────────────────────────────────────────────────
 function applyAll() {
   const q = searchInput.value.toLowerCase();
@@ -216,32 +176,10 @@ function applyAll() {
   // 2. ordenação
   visible.sort((a, b) => {
     if (activeFilter) {
-      // ordena pela prioridade do card
       const order = CARD_ORDER[activeFilter];
       const diff  = (order[a.dataset.level] ?? 9) - (order[b.dataset.level] ?? 9);
       if (diff !== 0) return diff;
-      // empate: nome crescente
-      return a.dataset.name.localeCompare(b.dataset.name);
     }
-
-    if (activeCol) {
-      const dir = activeDir === 'asc' ? 1 : -1;
-      switch (activeCol) {
-        case 'name':
-          return dir * a.dataset.name.localeCompare(b.dataset.name);
-        case 'ip':
-          return dir * cmpIp(a.dataset.ip, b.dataset.ip);
-        case 'local':
-          return dir * a.dataset.local.localeCompare(b.dataset.local);
-        case 'black':
-          return dir * (parseInt(a.dataset.black) - parseInt(b.dataset.black));
-        case 'status':
-          return dir * ((LEVEL_ORDER[a.dataset.level] ?? 9) - (LEVEL_ORDER[b.dataset.level] ?? 9));
-        case 'collected':
-          return dir * a.dataset.collected.localeCompare(b.dataset.collected);
-      }
-    }
-
     // padrão: nome crescente
     return a.dataset.name.localeCompare(b.dataset.name);
   });
