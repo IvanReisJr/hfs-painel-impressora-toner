@@ -33,6 +33,10 @@
 <style>
 .stat-filter:hover { box-shadow: 0 0 0 2px #adb5bd; }
 .stat-filter.active { box-shadow: 0 0 0 3px #0d6efd; }
+.sortable { cursor: pointer; user-select: none; }
+.sortable:hover { background: #e9ecef; }
+.sortable.asc::after  { content: ' ▲'; font-size: .7rem; }
+.sortable.desc::after { content: ' ▼'; font-size: .7rem; }
 </style>
 
 <div class="card">
@@ -53,9 +57,9 @@
       <table class="table table-hover mb-0" id="printerTable">
         <thead class="table-light">
           <tr>
-            <th>Impressora</th>
-            <th>IP</th>
-            <th>Local</th>
+            <th class="sortable" data-col="name">Impressora</th>
+            <th class="sortable" data-col="ip">IP</th>
+            <th class="sortable" data-col="local">Local</th>
             <th style="width:130px">Preto</th>
             <th style="width:110px">Ciano</th>
             <th style="width:110px">Magenta</th>
@@ -134,12 +138,38 @@ const CARD_ORDER = {
   unknown:  { unknown: 0, critical: 1, warning: 2, ok: 3 },
 };
 
+// comparação de IP como 4 octetos numéricos
+function cmpIp(a, b) {
+  const n = ip => ip.split('.').reduce((acc, v) => acc * 256 + parseInt(v), 0);
+  return n(a) - n(b);
+}
+
 // ── estado global ─────────────────────────────────────────────────────────────
-let activeFilter = null;   // card ativo ('critical' | 'warning' | 'unknown' | null)
+let activeFilter = null;
+let activeCol    = null;
+let activeDir    = 'asc';
 
 // ── busca ─────────────────────────────────────────────────────────────────────
 const searchInput = document.getElementById('searchInput');
 searchInput.addEventListener('input', applyAll);
+
+// ── colunas ordenáveis ────────────────────────────────────────────────────────
+document.querySelectorAll('th.sortable').forEach(th => {
+  th.addEventListener('click', () => {
+    const col = th.dataset.col;
+    if (activeCol === col) {
+      activeDir = activeDir === 'asc' ? 'desc' : 'asc';
+    } else {
+      activeCol = col;
+      activeDir = 'asc';
+    }
+    activeFilter = null;
+    document.querySelectorAll('.stat-filter').forEach(c => c.classList.remove('active'));
+    document.querySelectorAll('th.sortable').forEach(t => t.classList.remove('asc','desc'));
+    th.classList.add(activeDir);
+    applyAll();
+  });
+});
 
 // ── cards clicáveis ───────────────────────────────────────────────────────────
 document.querySelectorAll('.stat-filter').forEach(card => {
@@ -179,8 +209,14 @@ function applyAll() {
       const order = CARD_ORDER[activeFilter];
       const diff  = (order[a.dataset.level] ?? 9) - (order[b.dataset.level] ?? 9);
       if (diff !== 0) return diff;
+      return a.dataset.name.localeCompare(b.dataset.name);
     }
-    // padrão: nome crescente
+    if (activeCol) {
+      const dir = activeDir === 'asc' ? 1 : -1;
+      if (activeCol === 'ip')    return dir * cmpIp(a.dataset.ip, b.dataset.ip);
+      if (activeCol === 'local') return dir * a.dataset.local.localeCompare(b.dataset.local);
+      return dir * a.dataset.name.localeCompare(b.dataset.name);
+    }
     return a.dataset.name.localeCompare(b.dataset.name);
   });
 
