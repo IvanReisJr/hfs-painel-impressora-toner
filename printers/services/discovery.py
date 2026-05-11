@@ -130,6 +130,8 @@ def _http_device_info(ip: str, timeout: int) -> tuple[str, str, str]:
     Tries:
       1. /hp/device/DeviceInformation/Index  (newer firmware — E-series, M-series)
       2. /DevMgmt/ProductConfigDyn.xml       (LEDM XML)
+      3. /sws/app/information/device/deviceinfo.json (SWS JSON — HP Laser 408 etc.)
+      4. /sws/index.html                     (SWS HTML — older firmware)
 
     Returns: (location, alias, serial)
     """
@@ -178,6 +180,46 @@ def _http_device_info(ip: str, timeout: int) -> tuple[str, str, str]:
                 ])
                 if location or alias:
                     return location, alias, serial
+        except Exception:
+            pass
+
+        # --- SWS JSON (HP Laser 408, HP LaserJet Pro série antiga) ---
+        try:
+            resp = session.get(f"{base}{_SWS_DEVICE_INFO_PATH}", timeout=timeout)
+            if resp.status_code == 200:
+                data = resp.json()
+                location = (
+                    data.get("location") or data.get("Location") or
+                    data.get("sysLocation") or data.get("deviceLocation") or ""
+                ).strip()
+                alias = (
+                    data.get("deviceName") or data.get("DeviceName") or
+                    data.get("hostname") or ""
+                ).strip()
+                serial = (
+                    data.get("serialNumber") or data.get("SerialNumber") or ""
+                ).strip()
+                if location or alias or serial:
+                    return location, alias, serial
+        except Exception:
+            pass
+
+        # --- SWS HTML (HP Laser 408 — campo "Local" na página inicial) ---
+        try:
+            resp = session.get(f"{base}/sws/index.html", timeout=timeout)
+            if resp.status_code == 200:
+                location = _extract_field_after_label(resp.text, [
+                    "Local",
+                    "Location",
+                    "Localização",
+                ])
+                serial = _extract_field_after_label(resp.text, [
+                    "Número de série",
+                    "Serial Number",
+                    "Número de Série",
+                ])
+                if location:
+                    return location, "", serial
         except Exception:
             pass
 
