@@ -11,24 +11,35 @@
     </div>
   </div>
   <div class="col-6 col-md-3">
-    <div class="card stat-card stat-critical p-3">
+    <div class="card stat-card stat-critical p-3 stat-filter" data-filter="critical" style="cursor:pointer" title="Clique para filtrar por Crítico">
       <div class="text-muted small"><i class="bi bi-exclamation-triangle-fill text-danger"></i> Crítico (≤10%)</div>
       <div class="fs-3 fw-bold text-danger">{{ critical }}</div>
     </div>
   </div>
   <div class="col-6 col-md-3">
-    <div class="card stat-card stat-warning p-3">
+    <div class="card stat-card stat-warning p-3 stat-filter" data-filter="warning" style="cursor:pointer" title="Clique para filtrar por Atenção">
       <div class="text-muted small"><i class="bi bi-exclamation-circle-fill text-warning"></i> Atenção (≤20%)</div>
       <div class="fs-3 fw-bold text-warning">{{ warning }}</div>
     </div>
   </div>
   <div class="col-6 col-md-3">
-    <div class="card stat-card stat-nodata p-3">
+    <div class="card stat-card stat-nodata p-3 stat-filter" data-filter="unknown" style="cursor:pointer" title="Clique para filtrar por Sem dados">
       <div class="text-muted small"><i class="bi bi-question-circle text-secondary"></i> Sem dados</div>
       <div class="fs-3 fw-bold text-secondary">{{ no_data }}</div>
     </div>
   </div>
 </div>
+
+<style>
+.stat-filter:hover { box-shadow: 0 0 0 2px #adb5bd; }
+.stat-filter.active { box-shadow: 0 0 0 3px #0d6efd; }
+.sortable { cursor: pointer; user-select: none; white-space: nowrap; }
+.sortable:hover { background: #e9ecef; }
+.sort-icon { opacity: .35; font-size: .75rem; margin-left: 3px; }
+.sortable.asc .sort-icon::after  { content: ' ▲'; opacity: 1; }
+.sortable.desc .sort-icon::after { content: ' ▼'; opacity: 1; }
+.sortable:not(.asc):not(.desc) .sort-icon::after { content: ' ↕'; }
+</style>
 
 <div class="card">
   <div class="card-header d-flex justify-content-between align-items-center bg-white">
@@ -48,22 +59,29 @@
       <table class="table table-hover mb-0" id="printerTable">
         <thead class="table-light">
           <tr>
-            <th>Impressora</th>
-            <th>IP</th>
-            <th>Local</th>
-            <th style="width:130px">Preto</th>
+            <th class="sortable" data-col="name">Impressora <span class="sort-icon"></span></th>
+            <th class="sortable" data-col="ip">IP <span class="sort-icon"></span></th>
+            <th class="sortable" data-col="local">Local <span class="sort-icon"></span></th>
+            <th class="sortable" data-col="black" style="width:130px">Preto <span class="sort-icon"></span></th>
             <th style="width:110px">Ciano</th>
             <th style="width:110px">Magenta</th>
             <th style="width:110px">Amarelo</th>
-            <th>Status</th>
-            <th>Coletado</th>
+            <th class="sortable" data-col="status">Status <span class="sort-icon"></span></th>
+            <th class="sortable" data-col="collected">Coletado <span class="sort-icon"></span></th>
             <th></th>
           </tr>
         </thead>
         <tbody>
           {% for row in rows %}
           {% with p=row.printer r=row.reading %}
-          <tr class="printer-row" data-search="{{ p.name|lower }} {{ p.ip_address }} {{ p.location|lower }}">
+          <tr class="printer-row"
+              data-search="{{ p.name|lower }} {{ p.ip_address }} {{ p.location|lower }}"
+              data-level="{% if r %}{{ r.alert_level }}{% else %}unknown{% endif %}"
+              data-name="{{ p.name|lower }}"
+              data-ip="{{ p.ip_address }}"
+              data-local="{{ p.location|lower|default:'' }}"
+              data-black="{% if r and r.black_pct is not None %}{{ r.black_pct }}{% else %}-1{% endif %}"
+              data-collected="{% if r %}{{ r.collected_at|date:'YmdHi' }}{% else %}0{% endif %}">
             <td>
               <a href="{% url 'printers:printer_detail' p.pk %}" class="fw-semibold text-decoration-none">
                 {{ p.name }}
@@ -109,21 +127,136 @@
 
 {% block extra_js %}
 <script>
-// Search filter
-document.getElementById('searchInput').addEventListener('input', function() {
-  const q = this.value.toLowerCase();
-  document.querySelectorAll('.printer-row').forEach(row => {
-    row.style.display = row.dataset.search.includes(q) ? '' : 'none';
+// ── utilidades ────────────────────────────────────────────────────────────────
+
+function getCookie(name) {
+  return document.cookie.split(';').map(c => c.trim()).find(c => c.startsWith(name + '='))?.split('=')[1] || '';
+}
+
+// prioridade de nível para ordenação
+const LEVEL_ORDER = { critical: 0, warning: 1, ok: 2, unknown: 3 };
+
+// ordem de exibição ao clicar em cada card
+const CARD_ORDER = {
+  critical: { critical: 0, warning: 1, ok: 2, unknown: 3 },
+  warning:  { warning: 0, critical: 1, ok: 2, unknown: 3 },
+  unknown:  { unknown: 0, critical: 1, warning: 2, ok: 3 },
+};
+
+// comparação de IP como 4 octetos numéricos
+function cmpIp(a, b) {
+  const toNum = ip => ip.split('.').reduce((acc, v) => acc * 256 + parseInt(v), 0);
+  return toNum(a) - toNum(b);
+}
+
+// ── estado global ─────────────────────────────────────────────────────────────
+let activeFilter = null;   // card ativo ('critical' | 'warning' | 'unknown' | null)
+let activeCol    = null;   // coluna ativa para sort
+let activeDir    = 'asc';  // direção
+
+// ── busca ─────────────────────────────────────────────────────────────────────
+const searchInput = document.getElementById('searchInput');
+searchInput.addEventListener('input', applyAll);
+
+// ── cards clicáveis ───────────────────────────────────────────────────────────
+document.querySelectorAll('.stat-filter').forEach(card => {
+  card.addEventListener('click', () => {
+    const f = card.dataset.filter;
+    if (activeFilter === f) {
+      // segundo clique → desativa
+      activeFilter = null;
+    } else {
+      activeFilter = f;
+    }
+    // remove activeCol ao clicar em card (ordena pelo card)
+    activeCol = null;
+    clearColArrows();
+    document.querySelectorAll('.stat-filter').forEach(c => c.classList.remove('active'));
+    if (activeFilter) card.classList.add('active');
+    applyAll();
   });
 });
 
-// Collect now buttons
+// ── colunas ordenáveis ────────────────────────────────────────────────────────
+document.querySelectorAll('th.sortable').forEach(th => {
+  th.addEventListener('click', () => {
+    const col = th.dataset.col;
+    if (activeCol === col) {
+      activeDir = activeDir === 'asc' ? 'desc' : 'asc';
+    } else {
+      activeCol = col;
+      activeDir = 'asc';
+    }
+    // desativa card ao clicar em coluna
+    activeFilter = null;
+    document.querySelectorAll('.stat-filter').forEach(c => c.classList.remove('active'));
+    clearColArrows();
+    th.classList.add(activeDir);
+    applyAll();
+  });
+});
+
+function clearColArrows() {
+  document.querySelectorAll('th.sortable').forEach(t => t.classList.remove('asc', 'desc'));
+}
+
+// ── lógica principal ──────────────────────────────────────────────────────────
+function applyAll() {
+  const q = searchInput.value.toLowerCase();
+  const tbody = document.querySelector('#printerTable tbody');
+  const rows  = Array.from(tbody.querySelectorAll('.printer-row'));
+
+  // 1. visibilidade por busca
+  rows.forEach(r => {
+    r.style.display = r.dataset.search.includes(q) ? '' : 'none';
+  });
+
+  const visible = rows.filter(r => r.style.display !== 'none');
+
+  // 2. ordenação
+  visible.sort((a, b) => {
+    if (activeFilter) {
+      // ordena pela prioridade do card
+      const order = CARD_ORDER[activeFilter];
+      const diff  = (order[a.dataset.level] ?? 9) - (order[b.dataset.level] ?? 9);
+      if (diff !== 0) return diff;
+      // empate: nome crescente
+      return a.dataset.name.localeCompare(b.dataset.name);
+    }
+
+    if (activeCol) {
+      const dir = activeDir === 'asc' ? 1 : -1;
+      switch (activeCol) {
+        case 'name':
+          return dir * a.dataset.name.localeCompare(b.dataset.name);
+        case 'ip':
+          return dir * cmpIp(a.dataset.ip, b.dataset.ip);
+        case 'local':
+          return dir * a.dataset.local.localeCompare(b.dataset.local);
+        case 'black':
+          return dir * (parseInt(a.dataset.black) - parseInt(b.dataset.black));
+        case 'status':
+          return dir * ((LEVEL_ORDER[a.dataset.level] ?? 9) - (LEVEL_ORDER[b.dataset.level] ?? 9));
+        case 'collected':
+          return dir * a.dataset.collected.localeCompare(b.dataset.collected);
+      }
+    }
+
+    // padrão: nome crescente
+    return a.dataset.name.localeCompare(b.dataset.name);
+  });
+
+  // 3. reinsere na ordem calculada
+  visible.forEach(r => tbody.appendChild(r));
+}
+
+// ── coletar agora ─────────────────────────────────────────────────────────────
 document.querySelectorAll('.btn-collect').forEach(btn => {
   btn.addEventListener('click', function() {
-    const id = this.dataset.id;
+    const id   = this.dataset.id;
     const icon = this.querySelector('i');
     icon.className = 'bi bi-hourglass-split';
-    this.disabled = true;
+    this.disabled  = true;
     fetch(`/api/coletar/${id}/`, { method: 'POST', headers: {'X-CSRFToken': getCookie('csrftoken')} })
       .then(r => r.json())
       .then(data => {
@@ -134,27 +267,16 @@ document.querySelectorAll('.btn-collect').forEach(btn => {
   });
 });
 
-function getCookie(name) {
-  return document.cookie.split(';').map(c => c.trim()).find(c => c.startsWith(name + '='))?.split('=')[1] || '';
-}
-
-// Auto-refresh com countdown de 5 minutos
+// ── auto-refresh countdown 5 min ──────────────────────────────────────────────
 (function() {
-  const INTERVAL = 5 * 60; // segundos
-  let remaining = INTERVAL;
-  const el = document.getElementById('countdown');
-
-  function fmt(s) {
-    return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;
-  }
-
-  const timer = setInterval(() => {
+  const INTERVAL = 5 * 60;
+  let remaining  = INTERVAL;
+  const el       = document.getElementById('countdown');
+  const fmt      = s => `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;
+  const timer    = setInterval(() => {
     remaining--;
     if (el) el.textContent = fmt(remaining);
-    if (remaining <= 0) {
-      clearInterval(timer);
-      window.location.reload();
-    }
+    if (remaining <= 0) { clearInterval(timer); window.location.reload(); }
   }, 1000);
 })();
 </script>
