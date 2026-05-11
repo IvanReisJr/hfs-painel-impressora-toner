@@ -286,3 +286,38 @@ GitHub: [IvanReisJr/hfs-painel-impressora-toner](https://github.com/IvanReisJr/h
 - **Banco SQLite:** adequado para o volume atual (~90 impressoras, leitura diária). Se o histórico crescer muito (> 2 anos), avaliar migração para PostgreSQL.
 - **pysnmp 6.2:** usa `pysnmp.hlapi.asyncio` — versões anteriores usavam `pysnmp.hlapi` diretamente. Não fazer downgrade.
 - **Porta 161 UDP:** o firewall do Windows pode bloquear respostas SNMP. Verificar se a regra de entrada UDP 161 está liberada caso coletas SNMP falhem.
+
+---
+
+## 14. Status Atual e Integração Futura ao Sistema Geral do Hospital
+
+> **Situação:** o projeto está em fase de **homologação local**. Roda de forma independente na rede interna do hospital. Após aprovação, será integrado ao sistema geral de TI hospitalar.
+
+### O que não muda na integração
+
+A lógica de negócio (coleta SNMP/HTTP, modelos, comandos de management, testes) permanece intacta. Django foi escolhido justamente por ser modular — a camada de infraestrutura troca sem reescrever o núcleo.
+
+### O que precisará ser ajustado
+
+| Item atual | O que muda na integração |
+|---|---|
+| **SQLite** | Trocar por PostgreSQL ou SQL Server. Alterar `DATABASES` no `settings.py`. Migrar dados históricos via `dumpdata` / `loaddata` ou script SQL. |
+| **Autenticação aberta** | Adicionar autenticação — Active Directory via `django-auth-ldap`, ou SSO do sistema hospitalar via OAuth2/SAML (`social-auth-app-django`). |
+| **`runserver` local** | Substituir por servidor WSGI em produção: **Gunicorn + Nginx** (Linux) ou **IIS + wfastcgi** (Windows). |
+| **Whitenoise (estáticos)** | Em produção integrada, o servidor web (Nginx/IIS) serve os arquivos estáticos diretamente. Whitenoise pode ser removido. |
+| **URL local (127.0.0.1:8000)** | Receberá URL fixa dentro do domínio do hospital (ex: `intranet.hfs.local/toner`). Atualizar `ALLOWED_HOSTS` no `.env`. |
+| **Task Scheduler local** | Verificar se o agendamento deve migrar para o servidor de tarefas centralizado do hospital ou permanecer na máquina local. |
+| **Logs** | Atualmente gravados em `log_coleta.txt`. Na integração, centralizar no sistema de logging do hospital (ex: Graylog, ELK, ou tabela de auditoria). |
+
+### Checklist para a integração
+
+- [ ] Definir banco de dados alvo (PostgreSQL/SQL Server) e credenciais
+- [ ] Definir estratégia de autenticação (LDAP/AD ou SSO)
+- [ ] Provisionar servidor/VM para hospedar a aplicação
+- [ ] Configurar servidor web (Nginx ou IIS) com WSGI
+- [ ] Migrar dados históricos do SQLite
+- [ ] Atualizar `ALLOWED_HOSTS` e `SECRET_KEY` no `.env` de produção
+- [ ] Definir URL pública dentro do domínio interno
+- [ ] Validar acesso SNMP/HTTP a partir do novo servidor (firewall/VLAN)
+- [ ] Rodar suíte de testes no novo ambiente (`pytest`)
+- [ ] Treinamento do usuário final no novo endereço de acesso
