@@ -1,0 +1,12 @@
+venv/
+__pycache__/
+*.pyc
+*.pyo
+db.sqlite3
+staticfiles/
+.env
+*.log
+.pytest_cache/
+impressoras_descobertas.csv
+verificacao_toner*.xlsx
+log_coleta.txt

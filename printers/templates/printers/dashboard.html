@@ -1,0 +1,161 @@
+{% extends "printers/base.html" %}
+
+{% block title %}Dashboard de Toner — HFS{% endblock %}
+
+{% block content %}
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="card stat-card stat-ok p-3">
+      <div class="text-muted small">Total ativo</div>
+      <div class="fs-3 fw-bold">{{ total }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card stat-card stat-critical p-3">
+      <div class="text-muted small"><i class="bi bi-exclamation-triangle-fill text-danger"></i> Crítico (≤10%)</div>
+      <div class="fs-3 fw-bold text-danger">{{ critical }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card stat-card stat-warning p-3">
+      <div class="text-muted small"><i class="bi bi-exclamation-circle-fill text-warning"></i> Atenção (≤20%)</div>
+      <div class="fs-3 fw-bold text-warning">{{ warning }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card stat-card stat-nodata p-3">
+      <div class="text-muted small"><i class="bi bi-question-circle text-secondary"></i> Sem dados</div>
+      <div class="fs-3 fw-bold text-secondary">{{ no_data }}</div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header d-flex justify-content-between align-items-center bg-white">
+    <h5 class="mb-0"><i class="bi bi-list-ul me-2"></i>Impressoras</h5>
+    <div class="d-flex gap-2 align-items-center">
+      <input id="searchInput" type="search" class="form-control form-control-sm" placeholder="Buscar nome, IP, local..." style="width:220px">
+      <span class="text-muted small">
+        Auto-refresh em <span id="countdown" class="fw-bold text-primary">5:00</span>
+      </span>
+      <button class="btn btn-sm btn-outline-secondary" onclick="window.location.reload()">
+        <i class="bi bi-arrow-clockwise"></i> Atualizar
+      </button>
+    </div>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0" id="printerTable">
+        <thead class="table-light">
+          <tr>
+            <th>Impressora</th>
+            <th>IP</th>
+            <th>Local</th>
+            <th style="width:130px">Preto</th>
+            <th style="width:110px">Ciano</th>
+            <th style="width:110px">Magenta</th>
+            <th style="width:110px">Amarelo</th>
+            <th>Status</th>
+            <th>Coletado</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in rows %}
+          {% with p=row.printer r=row.reading %}
+          <tr class="printer-row" data-search="{{ p.name|lower }} {{ p.ip_address }} {{ p.location|lower }}">
+            <td>
+              <a href="{% url 'printers:printer_detail' p.pk %}" class="fw-semibold text-decoration-none">
+                {{ p.name }}
+              </a>
+              {% if p.is_color %}<span class="badge bg-info text-dark ms-1">Color</span>{% endif %}
+            </td>
+            <td class="text-monospace small text-secondary">{{ p.ip_address }}</td>
+            <td class="small">{{ p.location|default:"—" }}</td>
+
+            {% if r %}
+              <td>{% include "printers/_toner_bar.html" with pct=r.black_pct color="#333" %}</td>
+              <td>{% if p.is_color %}{% include "printers/_toner_bar.html" with pct=r.cyan_pct color="#0dcaf0" %}{% else %}<span class="text-muted">—</span>{% endif %}</td>
+              <td>{% if p.is_color %}{% include "printers/_toner_bar.html" with pct=r.magenta_pct color="#d63384" %}{% else %}<span class="text-muted">—</span>{% endif %}</td>
+              <td>{% if p.is_color %}{% include "printers/_toner_bar.html" with pct=r.yellow_pct color="#ffc107" %}{% else %}<span class="text-muted">—</span>{% endif %}</td>
+              <td>
+                <span class="badge badge-{{ r.alert_level }}">
+                  {% if r.alert_level == "critical" %}⚠ Crítico
+                  {% elif r.alert_level == "warning" %}! Atenção
+                  {% else %}✓ OK{% endif %}
+                </span>
+              </td>
+              <td class="small text-muted">{{ r.collected_at|date:"d/m H:i" }}</td>
+            {% else %}
+              <td colspan="5" class="text-muted small">Sem leitura</td>
+              <td><span class="badge badge-unknown">Sem dados</span></td>
+              <td>—</td>
+            {% endif %}
+
+            <td>
+              <button class="btn btn-xs btn-outline-primary btn-collect" data-id="{{ p.pk }}" title="Coletar agora">
+                <i class="bi bi-arrow-repeat"></i>
+              </button>
+            </td>
+          </tr>
+          {% endwith %}
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Search filter
+document.getElementById('searchInput').addEventListener('input', function() {
+  const q = this.value.toLowerCase();
+  document.querySelectorAll('.printer-row').forEach(row => {
+    row.style.display = row.dataset.search.includes(q) ? '' : 'none';
+  });
+});
+
+// Collect now buttons
+document.querySelectorAll('.btn-collect').forEach(btn => {
+  btn.addEventListener('click', function() {
+    const id = this.dataset.id;
+    const icon = this.querySelector('i');
+    icon.className = 'bi bi-hourglass-split';
+    this.disabled = true;
+    fetch(`/api/coletar/${id}/`, { method: 'POST', headers: {'X-CSRFToken': getCookie('csrftoken')} })
+      .then(r => r.json())
+      .then(data => {
+        icon.className = data.success ? 'bi bi-check-circle-fill text-success' : 'bi bi-x-circle-fill text-danger';
+        setTimeout(() => window.location.reload(), 1500);
+      })
+      .catch(() => { icon.className = 'bi bi-x-circle-fill text-danger'; this.disabled = false; });
+  });
+});
+
+function getCookie(name) {
+  return document.cookie.split(';').map(c => c.trim()).find(c => c.startsWith(name + '='))?.split('=')[1] || '';
+}
+
+// Auto-refresh com countdown de 5 minutos
+(function() {
+  const INTERVAL = 5 * 60; // segundos
+  let remaining = INTERVAL;
+  const el = document.getElementById('countdown');
+
+  function fmt(s) {
+    return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;
+  }
+
+  const timer = setInterval(() => {
+    remaining--;
+    if (el) el.textContent = fmt(remaining);
+    if (remaining <= 0) {
+      clearInterval(timer);
+      window.location.reload();
+    }
+  }, 1000);
+})();
+</script>
+{% endblock %}

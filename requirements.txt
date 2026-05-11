@@ -1,0 +1,9 @@
+django==5.1.*
+pysnmp==6.2.*
+requests
+lxml
+django-apscheduler
+whitenoise
+python-decouple
+pytest
+pytest-django

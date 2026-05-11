@@ -1,0 +1,16 @@
+{% if pct is not None %}
+<div class="d-flex align-items-center gap-1">
+  <div class="progress flex-grow-1" style="height:14px; border-radius:4px;">
+    <div class="progress-bar toner-bar"
+         style="width:{{ pct }}%; background:{{ color }};"
+         role="progressbar"
+         aria-valuenow="{{ pct }}"
+         aria-valuemin="0"
+         aria-valuemax="100">
+    </div>
+  </div>
+  <span class="small fw-semibold" style="min-width:32px; text-align:right;">{{ pct }}%</span>
+</div>
+{% else %}
+<span class="text-muted small">—</span>
+{% endif %}
