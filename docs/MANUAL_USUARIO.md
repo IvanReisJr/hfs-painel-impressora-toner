@@ -97,20 +97,43 @@ Você também pode clicar no botão **"Atualizar"** a qualquer momento para reca
 
 ---
 
-## 6. Coletando Dados de Uma Impressora na Hora
+## 6. Botões de Ação Manual
 
-Se precisar saber o nível atual de uma impressora específica sem esperar a coleta do dia seguinte:
+No canto superior direito do painel há três botões além do "Atualizar":
 
-1. Localize a impressora na tabela
-2. Clique no botão circular (↻) na última coluna
-3. Aguarde — o ícone muda para um ampulheta enquanto busca
-4. Ao terminar, a página recarrega com o dado atualizado
+| Botão | Cor | O que faz |
+|---|---|---|
+| **Coletar Todos** | Verde | Lê o nível de toner de todas as impressoras **já cadastradas** agora mesmo |
+| **Atualizar Locais** | Amarelo | Varre toda a rede, descobre impressoras novas e atualiza os setores/localizações |
+| **Atualizar** | Cinza | Apenas recarrega a página com os dados que já estão no banco |
 
-> Use esse botão com moderação — ele acessa a impressora diretamente pela rede.
+> **Importante:** "Coletar Todos" **não descobre impressoras novas** — ele só atualiza o toner das que já existem no sistema. Para descobrir impressoras novas ou atualizar localizações, use **Atualizar Locais**.
+
+**Quando usar cada um:**
+- Quer ver o toner atualizado agora → **Coletar Todos**
+- Uma impressora apareceu sem setor ou com setor errado → **Atualizar Locais**
+- Alguém coletou dados em outra aba e quer ver o resultado → **Atualizar**
+
+Ao clicar em **Coletar Todos** ou **Atualizar Locais**, o ícone vira uma ampulheta e o botão fica desabilitado enquanto o processo roda em segundo plano. O painel recarrega automaticamente ao terminar.
+
+> **Atualizar Locais** varre ~1.000 endereços de rede e pode levar cerca de 2 minutos.
 
 ---
 
-## 7. Detalhes de uma Impressora
+## 7. Coletando Dados de Uma Impressora Específica
+
+Se precisar atualizar o toner de **uma impressora específica** sem coletar todas:
+
+1. Localize a impressora na tabela
+2. Clique no botão circular (↻) na última coluna da linha
+3. Aguarde — o ícone muda para ampulheta enquanto busca
+4. Ao terminar, a página recarrega com o dado atualizado
+
+> Use esse botão para checar pontualmente uma impressora crítica sem esperar a coleta geral.
+
+---
+
+## 8. Detalhes de uma Impressora
 
 Clique no **nome** de qualquer impressora para abrir a página de detalhes. Lá você encontra:
 
@@ -122,7 +145,7 @@ Clique no **nome** de qualquer impressora para abrir a página de detalhes. Lá 
 
 ---
 
-## 8. Quando Agir — Guia Rápido
+## 9. Quando Agir — Guia Rápido
 
 | Situação | O que fazer |
 |---|---|
@@ -134,7 +157,7 @@ Clique no **nome** de qualquer impressora para abrir a página de detalhes. Lá 
 
 ---
 
-## 9. Planilha Excel para Verificação
+## 10. Planilha Excel para Verificação
 
 Todo dia, junto com a coleta automática de toner, o sistema gera uma planilha Excel com:
 
@@ -148,7 +171,7 @@ O arquivo fica salvo na pasta do sistema com o nome `verificacao_toner_AAAA-MM-D
 
 ---
 
-## 10. Perguntas Frequentes
+## 11. Perguntas Frequentes
 
 **O painel não carregou — o que faço?**  
 Verifique com o TI se o servidor está rodando. O endereço de acesso é `http://127.0.0.1:8000` (ou outro informado pelo TI).
