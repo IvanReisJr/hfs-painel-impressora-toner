@@ -11,6 +11,7 @@ Strategy per IP (runs concurrently via ThreadPoolExecutor):
 Results are aggregated into DiscoveryResult, ready to export as CSV.
 """
 
+import html as html_module
 import ipaddress
 import logging
 import re
@@ -199,7 +200,7 @@ def _extract_field_after_label(html: str, labels: list[str]) -> str:
             re.IGNORECASE | re.DOTALL,
         )
         if m and m.group(1).strip():
-            return m.group(1).strip()
+            return html_module.unescape(m.group(1).strip())
         # Pattern 2: text content of next block/cell element after the label
         m = re.search(
             escaped + r'.{0,300}?<(?:td|dd|span|div|p)[^>]*>\s*([^<]+?)\s*<',
@@ -207,7 +208,7 @@ def _extract_field_after_label(html: str, labels: list[str]) -> str:
             re.IGNORECASE | re.DOTALL,
         )
         if m and m.group(1).strip():
-            return m.group(1).strip()
+            return html_module.unescape(m.group(1).strip())
     return ""
 
 

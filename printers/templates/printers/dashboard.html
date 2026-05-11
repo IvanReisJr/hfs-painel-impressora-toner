@@ -93,7 +93,13 @@
               {% if p.is_color %}<span class="badge bg-info text-dark ms-1">Color</span>{% endif %}
             </td>
             <td class="text-monospace small text-secondary">{{ p.ip_address }}</td>
-            <td class="small">{{ p.location|default:"—" }}</td>
+            <td class="small">
+              <span class="location-text">{{ p.location|default:"—" }}</span>
+              <input type="text" class="form-control form-control-sm location-input d-none" value="{{ p.location|default:'' }}" style="width:160px;display:inline-block">
+              <button class="btn btn-xs btn-link p-0 ms-1 btn-edit-local" data-id="{{ p.pk }}" title="Editar local"><i class="bi bi-pencil"></i></button>
+              <button class="btn btn-xs btn-link p-0 ms-1 btn-save-local d-none text-success" data-id="{{ p.pk }}" title="Salvar"><i class="bi bi-check-lg"></i></button>
+              <button class="btn btn-xs btn-link p-0 ms-1 btn-cancel-local d-none text-secondary" title="Cancelar"><i class="bi bi-x-lg"></i></button>
+            </td>
 
             {% if r %}
               <td>{% include "printers/_toner_bar.html" with pct=r.black_pct color="#333" %}</td>
@@ -282,6 +288,60 @@ function showToast(msg, type) {
   container.appendChild(t);
   setTimeout(() => t.remove(), 6000);
 }
+
+// ── editar localização inline ─────────────────────────────────────────────────
+document.querySelectorAll('.btn-edit-local').forEach(btn => {
+  btn.addEventListener('click', function() {
+    const td    = this.closest('td');
+    td.querySelector('.location-text').classList.add('d-none');
+    td.querySelector('.location-input').classList.remove('d-none');
+    td.querySelector('.btn-edit-local').classList.add('d-none');
+    td.querySelector('.btn-save-local').classList.remove('d-none');
+    td.querySelector('.btn-cancel-local').classList.remove('d-none');
+    td.querySelector('.location-input').focus();
+  });
+});
+
+document.querySelectorAll('.btn-cancel-local').forEach(btn => {
+  btn.addEventListener('click', function() {
+    const td = this.closest('td');
+    td.querySelector('.location-text').classList.remove('d-none');
+    td.querySelector('.location-input').classList.add('d-none');
+    td.querySelector('.btn-edit-local').classList.remove('d-none');
+    td.querySelector('.btn-save-local').classList.add('d-none');
+    td.querySelector('.btn-cancel-local').classList.add('d-none');
+  });
+});
+
+document.querySelectorAll('.btn-save-local').forEach(btn => {
+  btn.addEventListener('click', function() {
+    const td       = this.closest('td');
+    const id       = this.dataset.id;
+    const input    = td.querySelector('.location-input');
+    const newLocal = input.value.trim();
+    fetch(`/api/local/${id}/`, {
+      method: 'POST',
+      headers: {'X-CSRFToken': getCookie('csrftoken'), 'Content-Type': 'application/json'},
+      body: JSON.stringify({ location: newLocal }),
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.success) {
+        const span = td.querySelector('.location-text');
+        span.textContent = data.location || '—';
+        // atualiza data-search da linha
+        const row = td.closest('tr');
+        row.dataset.local = (data.location || '').toLowerCase();
+        row.dataset.search = row.dataset.search.replace(/\S+$/, '') + ' ' + row.dataset.local;
+      }
+      td.querySelector('.location-text').classList.remove('d-none');
+      td.querySelector('.location-input').classList.add('d-none');
+      td.querySelector('.btn-edit-local').classList.remove('d-none');
+      td.querySelector('.btn-save-local').classList.add('d-none');
+      td.querySelector('.btn-cancel-local').classList.add('d-none');
+    });
+  });
+});
 
 // ── coletar agora ─────────────────────────────────────────────────────────────
 document.querySelectorAll('.btn-collect').forEach(btn => {

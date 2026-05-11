@@ -14,4 +14,5 @@ urlpatterns = [
     path("api/coletar-todos/", views.api_collect_all, name="api_collect_all"),
     path("api/atualizar-localizacoes/", views.api_update_locations, name="api_update_locations"),
     path("api/job-status/", views.api_job_status, name="api_job_status"),
+    path("api/local/<int:pk>/", views.api_update_location, name="api_update_location"),
 ]

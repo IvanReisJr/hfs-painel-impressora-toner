@@ -159,6 +159,17 @@ def api_update_locations(request):
     return JsonResponse({"success": True, "message": "Varredura iniciada (~2 min) — localizações serão atualizadas."})
 
 
+@csrf_exempt
+@require_POST
+def api_update_location(request, pk: int):
+    """Atualiza a localização de uma impressora."""
+    printer = get_object_or_404(Printer, pk=pk)
+    data = json.loads(request.body)
+    printer.location = data.get("location", "").strip()
+    printer.save(update_fields=["location"])
+    return JsonResponse({"success": True, "location": printer.location})
+
+
 @require_GET
 def api_job_status(request):
     """Retorna se há jobs em andamento."""
