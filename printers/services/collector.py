@@ -43,12 +43,13 @@ def _collect_http(printer: Printer) -> http_client.HttpTonerResult:
 
 
 def _save_reading(printer: Printer, result, protocol: str) -> TonerReading:
+    is_color = printer.is_color
     return TonerReading.objects.create(
         printer=printer,
         black_pct=getattr(result, "black_pct", None),
-        cyan_pct=getattr(result, "cyan_pct", None),
-        magenta_pct=getattr(result, "magenta_pct", None),
-        yellow_pct=getattr(result, "yellow_pct", None),
+        cyan_pct=getattr(result, "cyan_pct", None) if is_color else None,
+        magenta_pct=getattr(result, "magenta_pct", None) if is_color else None,
+        yellow_pct=getattr(result, "yellow_pct", None) if is_color else None,
         protocol_used=protocol,
         success=result.success,
         error_message=getattr(result, "error", ""),
