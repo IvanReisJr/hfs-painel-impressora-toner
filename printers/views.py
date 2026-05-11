@@ -1,8 +1,10 @@
 """Views for HFS Printer Toner Dashboard."""
 
 import json
+import threading
 from datetime import timedelta
 
+from django.core.management import call_command
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
@@ -10,7 +12,11 @@ from django.views.decorators.http import require_GET, require_POST
 from django.views.decorators.csrf import csrf_exempt
 
 from printers.models import Printer, TonerReading
-from printers.services.collector import collect_printer
+from printers.services.collector import collect_printer, collect_all_active
+
+# flags de controle para evitar execuções simultâneas
+_collecting_all = False
+_discovering    = False
 
 
 @require_GET
@@ -107,4 +113,56 @@ def api_collect_now(request, pk: int):
         "success": result.success,
         "protocol_used": result.protocol_used,
         "error": result.error,
+    })
+
+
+@csrf_exempt
+@require_POST
+def api_collect_all(request):
+    """Coleta toner de todas as impressoras ativas em background."""
+    global _collecting_all
+    if _collecting_all:
+        return JsonResponse({"success": False, "message": "Coleta já em andamento, aguarde."})
+
+    def run():
+        global _collecting_all
+        _collecting_all = True
+        try:
+            collect_all_active()
+        finally:
+            _collecting_all = False
+
+    threading.Thread(target=run, daemon=True).start()
+    return JsonResponse({"success": True, "message": "Coleta iniciada — o painel atualiza em instantes."})
+
+
+@csrf_exempt
+@require_POST
+def api_update_locations(request):
+    """Descobre impressoras na rede e atualiza localizações em background."""
+    global _discovering
+    if _discovering:
+        return JsonResponse({"success": False, "message": "Descoberta já em andamento, aguarde."})
+
+    def run():
+        global _discovering
+        _discovering = True
+        try:
+            call_command("descobrir_impressoras", "192.168.100.0/22",
+                         saida="impressoras_descobertas.csv", verbosity=0)
+            call_command("importar_impressoras", "impressoras_descobertas.csv",
+                         atualizar=True, verbosity=0)
+        finally:
+            _discovering = False
+
+    threading.Thread(target=run, daemon=True).start()
+    return JsonResponse({"success": True, "message": "Varredura iniciada (~2 min) — localizações serão atualizadas."})
+
+
+@require_GET
+def api_job_status(request):
+    """Retorna se há jobs em andamento."""
+    return JsonResponse({
+        "collecting_all": _collecting_all,
+        "discovering":    _discovering,
     })

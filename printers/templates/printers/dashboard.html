@@ -47,6 +47,12 @@
       <span class="text-muted small">
         Auto-refresh em <span id="countdown" class="fw-bold text-primary">5:00</span>
       </span>
+      <button id="btnColetarTodos" class="btn btn-sm btn-outline-success" title="Coleta toner de todas as impressoras agora">
+        <i class="bi bi-arrow-repeat"></i> Coletar Todos
+      </button>
+      <button id="btnAtualizarLocais" class="btn btn-sm btn-outline-warning" title="Varre a rede e atualiza localizações (~2 min)">
+        <i class="bi bi-geo-alt"></i> Atualizar Locais
+      </button>
       <button class="btn btn-sm btn-outline-secondary" onclick="window.location.reload()">
         <i class="bi bi-arrow-clockwise"></i> Atualizar
       </button>
@@ -222,6 +228,59 @@ function applyAll() {
 
   // 3. reinsere na ordem calculada
   visible.forEach(r => tbody.appendChild(r));
+}
+
+// ── coletar todos ────────────────────────────────────────────────────────────
+function jobBtn(btnId, url, msg) {
+  const btn  = document.getElementById(btnId);
+  const icon = btn.querySelector('i');
+  const orig = icon.className;
+  btn.disabled   = true;
+  icon.className = 'bi bi-hourglass-split';
+  fetch(url, { method: 'POST', headers: {'X-CSRFToken': getCookie('csrftoken')} })
+    .then(r => r.json())
+    .then(data => {
+      icon.className = 'bi bi-check-circle-fill text-success';
+      showToast(data.message, data.success ? 'success' : 'warning');
+      // poll até terminar, depois recarrega
+      const poll = setInterval(() => {
+        fetch('/api/job-status/')
+          .then(r => r.json())
+          .then(s => {
+            if (!s.collecting_all && !s.discovering) {
+              clearInterval(poll);
+              icon.className = orig;
+              btn.disabled   = false;
+              window.location.reload();
+            }
+          });
+      }, 3000);
+    })
+    .catch(() => { icon.className = orig; btn.disabled = false; });
+}
+
+document.getElementById('btnColetarTodos').addEventListener('click', () =>
+  jobBtn('btnColetarTodos', '/api/coletar-todos/', 'Coletando...')
+);
+document.getElementById('btnAtualizarLocais').addEventListener('click', () =>
+  jobBtn('btnAtualizarLocais', '/api/atualizar-localizacoes/', 'Varrendo rede...')
+);
+
+// ── toast de notificação ──────────────────────────────────────────────────────
+function showToast(msg, type) {
+  let container = document.getElementById('toastContainer');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'toastContainer';
+    container.style.cssText = 'position:fixed;bottom:1.5rem;right:1.5rem;z-index:9999;display:flex;flex-direction:column;gap:.5rem';
+    document.body.appendChild(container);
+  }
+  const t = document.createElement('div');
+  t.className = `alert alert-${type === 'success' ? 'success' : 'warning'} shadow py-2 px-3 mb-0`;
+  t.style.cssText = 'min-width:280px;font-size:.9rem';
+  t.textContent = msg;
+  container.appendChild(t);
+  setTimeout(() => t.remove(), 6000);
 }
 
 // ── coletar agora ─────────────────────────────────────────────────────────────
