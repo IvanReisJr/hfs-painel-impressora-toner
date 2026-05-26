@@ -139,24 +139,49 @@ def api_collect_all(request):
 @csrf_exempt
 @require_POST
 def api_update_locations(request):
-    """Descobre impressoras na rede e atualiza localizações em background."""
+    """Sincroniza cadastro de impressoras a partir da planilha Excel."""
     global _discovering
     if _discovering:
-        return JsonResponse({"success": False, "message": "Descoberta já em andamento, aguarde."})
+        return JsonResponse({"success": False, "message": "Sincronização já em andamento, aguarde."})
 
     def run():
         global _discovering
         _discovering = True
         try:
-            call_command("descobrir_impressoras", "192.168.100.0/22",
-                         saida="impressoras_descobertas.csv", verbosity=0)
-            call_command("importar_impressoras", "impressoras_descobertas.csv",
-                         atualizar=True, verbosity=0)
+            import re
+            import pandas as pd
+            from printers.models import Printer
+
+            TIPOS_ATIVOS = ["Impressora PB", "Multifuncional PB", "Multifuncional Color"]
+            PLANILHA = "Inventário_Impressoras_Simpress_Validadas.xlsx"
+
+            df = pd.read_excel(PLANILHA, sheet_name="Parque Impressoras")
+
+            def fix_ip(ip):
+                ip = str(ip).strip()
+                m = re.match(r"^(\d{1,3})(\d{3})(\d{3})(\d{1,3})$", ip)
+                return f"{m.group(1)}.{m.group(2)}.{m.group(3)}.{m.group(4)}" if m else ip
+
+            df["Ip"] = df["Ip"].apply(fix_ip)
+            df = df[df["Ip"].str.match(r"^\d+\.\d+\.\d+\.\d+$", na=False)]
+
+            for _, row in df.iterrows():
+                ip   = str(row["Ip"]).strip()
+                tipo = str(row.get("Tipo", "")).strip()
+                ativo = tipo in TIPOS_ATIVOS
+                Printer.objects.filter(ip_address=ip).update(
+                    location=str(row.get("Local HSF", "")).strip(),
+                    model_name=str(row.get("Modelo", "")).strip(),
+                    printer_type=tipo,
+                    contract_code=str(row.get("Codigo Contrato", "")).strip(),
+                    serial_number=str(row.get("Numero Serie", "")).strip(),
+                    is_active=ativo,
+                )
         finally:
             _discovering = False
 
     threading.Thread(target=run, daemon=True).start()
-    return JsonResponse({"success": True, "message": "Varredura iniciada (~2 min) — localizações serão atualizadas."})
+    return JsonResponse({"success": True, "message": "Sincronizando planilha — aguarde alguns segundos."})
 
 
 @csrf_exempt
