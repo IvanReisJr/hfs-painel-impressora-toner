@@ -99,24 +99,29 @@ Você também pode clicar no botão **"Atualizar"** a qualquer momento para reca
 
 ## 6. Botões de Ação Manual
 
-No canto superior direito do painel há três botões além do "Atualizar":
+No canto superior direito do painel há três botões:
 
 | Botão | Cor | O que faz |
 |---|---|---|
-| **Coletar Todos** | Verde | Lê o nível de toner de todas as impressoras **já cadastradas** agora mesmo |
-| **Atualizar Locais** | Amarelo | Varre toda a rede, descobre impressoras novas e atualiza os setores/localizações |
+| **Coletar Todos** | Verde | Vai até cada impressora na rede agora e lê o % de toner via SNMP/HTTP |
+| **Sincronizar Planilha** | Amarelo | Relê a planilha do contrato e atualiza nome, modelo, tipo, Local HSF, série e contrato |
 | **Atualizar** | Cinza | Apenas recarrega a página com os dados que já estão no banco |
 
-> **Importante:** "Coletar Todos" **não descobre impressoras novas** — ele só atualiza o toner das que já existem no sistema. Para descobrir impressoras novas ou atualizar localizações, use **Atualizar Locais**.
+**Regra geral do sistema:**
+- **Rede** → fornece apenas os níveis de toner (Preto, Ciano, Magenta, Amarelo)
+- **Planilha** (`Inventário_Impressoras_Simpress_Validadas.xlsx`) → fonte de todos os outros dados cadastrais
 
 **Quando usar cada um:**
-- Quer ver o toner atualizado agora → **Coletar Todos**
-- Uma impressora apareceu sem setor ou com setor errado → **Atualizar Locais**
-- Alguém coletou dados em outra aba e quer ver o resultado → **Atualizar**
 
-Ao clicar em **Coletar Todos** ou **Atualizar Locais**, o ícone vira uma ampulheta e o botão fica desabilitado enquanto o processo roda em segundo plano. O painel recarrega automaticamente ao terminar.
+| Situação | Botão |
+|---|---|
+| Quero ver o toner atualizado agora | **Coletar Todos** |
+| A planilha foi atualizada (novo local, modelo, contrato) | **Sincronizar Planilha** |
+| Alguém coletou em outra aba e quero ver o resultado | **Atualizar** |
 
-> **Atualizar Locais** varre ~1.000 endereços de rede e pode levar cerca de 2 minutos.
+Ao clicar em **Coletar Todos** ou **Sincronizar Planilha**, o ícone vira uma ampulheta e o botão fica desabilitado enquanto o processo roda em segundo plano. O painel recarrega automaticamente ao terminar.
+
+> **Coletar Todos** pode levar alguns segundos dependendo da quantidade de impressoras na rede.
 
 ---
 
