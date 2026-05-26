@@ -16,6 +16,9 @@ class Printer(models.Model):
     ip_address = models.GenericIPAddressField(unique=True, verbose_name="Endereço IP")
     location = models.CharField(max_length=200, blank=True, verbose_name="Localização")
     model_name = models.CharField(max_length=100, blank=True, verbose_name="Modelo")
+    contract_code = models.CharField(max_length=50, blank=True, default="", verbose_name="Cód. Contrato")
+    serial_number = models.CharField(max_length=100, blank=True, default="", verbose_name="Nº Série")
+    printer_type = models.CharField(max_length=100, blank=True, default="", verbose_name="Tipo")
     protocol = models.CharField(
         max_length=10,
         choices=Protocol.choices,

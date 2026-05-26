@@ -63,13 +63,16 @@
       <table class="table table-hover mb-0" id="printerTable">
         <thead class="table-light">
           <tr>
-            <th class="sortable" data-col="name">Impressora</th>
+            <th class="sortable" data-col="contract">Cód. Contrato</th>
+            <th class="sortable" data-col="serial">Nº Série</th>
+            <th class="sortable" data-col="model">Modelo</th>
             <th class="sortable" data-col="ip">IP</th>
+            <th class="sortable" data-col="type">Tipo</th>
             <th class="sortable" data-col="local">Local</th>
-            <th style="width:130px">Preto</th>
-            <th style="width:110px">Ciano</th>
-            <th style="width:110px">Magenta</th>
-            <th style="width:110px">Amarelo</th>
+            <th style="width:120px">Preto</th>
+            <th style="width:100px">Ciano</th>
+            <th style="width:100px">Magenta</th>
+            <th style="width:100px">Amarelo</th>
             <th>Status</th>
             <th>Coletado</th>
             <th></th>
@@ -79,20 +82,27 @@
           {% for row in rows %}
           {% with p=row.printer r=row.reading %}
           <tr class="printer-row"
-              data-search="{{ p.name|lower }} {{ p.ip_address }} {{ p.location|lower }}"
+              data-search="{{ p.name|lower }} {{ p.ip_address }} {{ p.location|lower }} {{ p.printer_type|lower }} {{ p.serial_number|lower }}"
               data-level="{% if r %}{{ r.alert_level }}{% else %}unknown{% endif %}"
               data-name="{{ p.name|lower }}"
               data-ip="{{ p.ip_address }}"
               data-local="{{ p.location|lower|default:'' }}"
+              data-contract="{{ p.contract_code|lower }}"
+              data-serial="{{ p.serial_number|lower }}"
+              data-model="{{ p.model_name|lower }}"
+              data-type="{{ p.printer_type|lower }}"
               data-black="{% if r and r.black_pct is not None %}{{ r.black_pct }}{% else %}-1{% endif %}"
               data-collected="{% if r %}{{ r.collected_at|date:'YmdHi' }}{% else %}0{% endif %}">
-            <td>
+            <td class="small text-secondary">{{ p.contract_code|default:"—" }}</td>
+            <td class="small text-monospace">{{ p.serial_number|default:"—" }}</td>
+            <td class="small">
               <a href="{% url 'printers:printer_detail' p.pk %}" class="fw-semibold text-decoration-none">
-                {{ p.name }}
+                {{ p.model_name|default:p.name }}
               </a>
               {% if p.is_color %}<span class="badge bg-info text-dark ms-1">Color</span>{% endif %}
             </td>
             <td class="text-monospace small text-secondary">{{ p.ip_address }}</td>
+            <td class="small">{{ p.printer_type|default:"—" }}</td>
             <td class="small">
               <span class="location-text">{{ p.location|default:"—" }}</span>
               <input type="text" class="form-control form-control-sm location-input d-none" value="{{ p.location|default:'' }}" style="width:160px;display:inline-block">
@@ -225,8 +235,12 @@ function applyAll() {
     }
     if (activeCol) {
       const dir = activeDir === 'asc' ? 1 : -1;
-      if (activeCol === 'ip')    return dir * cmpIp(a.dataset.ip, b.dataset.ip);
-      if (activeCol === 'local') return dir * a.dataset.local.localeCompare(b.dataset.local);
+      if (activeCol === 'ip')       return dir * cmpIp(a.dataset.ip, b.dataset.ip);
+      if (activeCol === 'local')    return dir * a.dataset.local.localeCompare(b.dataset.local);
+      if (activeCol === 'contract') return dir * a.dataset.contract.localeCompare(b.dataset.contract);
+      if (activeCol === 'serial')   return dir * a.dataset.serial.localeCompare(b.dataset.serial);
+      if (activeCol === 'model')    return dir * a.dataset.model.localeCompare(b.dataset.model);
+      if (activeCol === 'type')     return dir * a.dataset.type.localeCompare(b.dataset.type);
       return dir * a.dataset.name.localeCompare(b.dataset.name);
     }
     return a.dataset.name.localeCompare(b.dataset.name);
