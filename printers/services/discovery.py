@@ -115,7 +115,7 @@ def _http_probe(ip: str, timeout: int) -> tuple[bool, bool, str, str]:
                     if "<title>" in body_lower:
                         start = resp.text.lower().find("<title>") + 7
                         end = resp.text.lower().find("</title>", start)
-                        name = resp.text[start:end].strip()
+                        name = html_module.unescape(resp.text[start:end].strip())
                         model = name
                     return True, is_color, name, model
             except Exception:
