@@ -1,6 +1,0 @@
-name,ip_address,location,model_name,protocol,snmp_community,is_color,is_active
-HP LaserJet 408 - TI,192.168.103.88,Sala TI - 2º Andar,HP Laser 408dn,auto,public,false,true
-HP Color LaserJet - RH,192.168.100.173,RH - 1º Andar,HP Color LaserJet Pro MFP,auto,public,true,true
-HP LaserJet - Financeiro,192.168.1.10,Financeiro - Sala 3,HP LaserJet Pro 400,snmp,public,false,true
-HP LaserJet - Diretoria,192.168.1.20,Diretoria - 3º Andar,HP LaserJet Enterprise,http,public,false,true
-HP Color - Marketing,192.168.1.30,Marketing - 2º Andar,HP Color LaserJet M452,auto,public,true,true

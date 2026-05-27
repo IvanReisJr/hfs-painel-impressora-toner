@@ -8,5 +8,9 @@ staticfiles/
 *.log
 .pytest_cache/
 impressoras_descobertas.csv
+locais_inventario.csv
+modelo_impressoras.csv
 verificacao_toner*.xlsx
 log_coleta.txt
+~$*.xlsx
+Invent*.xlsx

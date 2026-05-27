@@ -9,14 +9,14 @@ import asyncio
 import logging
 from dataclasses import dataclass
 
-from pysnmp.hlapi.asyncio import (
+from pysnmp.hlapi.v3arch.asyncio import (
     CommunityData,
     ContextData,
     ObjectIdentity,
     ObjectType,
     SnmpEngine,
     UdpTransportTarget,
-    getCmd,
+    get_cmd,
 )
 
 logger = logging.getLogger(__name__)
@@ -64,11 +64,11 @@ async def _fetch_async(
 ) -> SnmpTonerResult:
     result = SnmpTonerResult(success=False)
     engine = SnmpEngine()
-    transport = UdpTransportTarget((ip, 161), timeout=timeout, retries=retries)
+    transport = await UdpTransportTarget.create((ip, 161), timeout=timeout, retries=retries)
 
     try:
         for field_name, slot in _CARTRIDGE_SLOTS.items():
-            error_indication, error_status, _, var_binds = await getCmd(
+            error_indication, error_status, _, var_binds = await get_cmd(
                 engine,
                 CommunityData(community, mpModel=1),
                 transport,
@@ -77,8 +77,11 @@ async def _fetch_async(
                 ObjectType(ObjectIdentity(f"{_OID_MAX_BASE}.{slot}")),
             )
 
-            if error_indication or error_status:
-                continue
+            if error_indication:
+                result.error = str(error_indication)
+                break  # falha de rede — não adianta tentar os demais slots
+            if error_status:
+                continue  # OID não existe neste slot (ex: impressora mono sem cor)
 
             if len(var_binds) >= 2:
                 try:
@@ -97,6 +100,7 @@ async def _fetch_async(
         result.error = str(exc)
         logger.warning("SNMP error for %s: %s", ip, exc)
 
+    engine.close_dispatcher()
     return result
 
 
