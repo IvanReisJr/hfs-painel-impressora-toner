@@ -1,9 +1,9 @@
 # Documentação Técnica — HFS Painel Impressora Toner
 
-**Versão:** 1.3.0  
+**Versão:** 1.4.0  
 **Projeto:** Monitoramento de toner de impressoras HP — Hospital  
 **Responsável inicial:** Ivan Reis  
-**Data:** Maio/2026
+**Data:** Junho/2026
 
 ---
 
@@ -17,10 +17,10 @@ Sistema web interno para monitorar em tempo real o nível de toner de ~90 impres
 
 | Camada | Tecnologia | Versão |
 |---|---|---|
-| Linguagem | Python | 3.12 |
+| Linguagem | Python | 3.13 |
 | Framework web | Django | 5.1 |
-| Banco de dados | SQLite | (built-in) |
-| Coleta SNMP | pysnmp | 6.2 |
+| Banco de dados | SQLite (padrão) / PostgreSQL (opcional via `DB_ENGINE`) | (built-in) |
+| Coleta SNMP | pysnmp | 7.1 |
 | Coleta HTTP/EWS | requests + lxml | — |
 | Relatório Excel | openpyxl | — |
 | Arquivos estáticos | whitenoise | — |
@@ -176,17 +176,26 @@ O comando `descobrir_impressoras` varre ranges CIDR com `ThreadPoolExecutor` (50
 
 ### 7.1 Windows Task Scheduler (principal)
 
-Tarefa: **HFS_Coleta_Toner**  
-Horário: **07:00 diariamente**  
-Script: `executar_coleta.bat`
+Três tarefas configuradas no servidor (`192.168.100.70`):
+
+| Tarefa | Horário | Script |
+|---|---|---|
+| `HFS_Toner_Coletar_06h` | 06:00 diariamente | `executar_coleta.bat` |
+| `HFS_Toner_Coletar_12h` | 12:00 diariamente | `executar_coleta.bat` |
+| `HFS_Toner_Coletar_18h` | 18:00 diariamente | `executar_coleta.bat` |
+
+Caminho do bat no servidor:
+```
+C:\Pietro\Projetos\HFS_PAINEL_IMPRESSORA_TONER\HFS_PAINEL_IMPRESSORA_TONER\executar_coleta.bat
+```
 
 O bat executa em sequência:
 ```
-1. descobrir_impressoras 192.168.100.0/22  → descobre IPs novos
-2. importar_impressoras --atualizar        → cadastra/atualiza no banco
-3. collect_toner                           → lê toner de todas as ativas
-4. exportar_excel verificacao_YYYY-MM-DD   → gera planilha do dia
+1. collect_toner      → lê toner de todas as impressoras ativas
+2. exportar_excel     → gera planilha de verificação do dia (verificacao_toner_AAAAMMDD.xlsx)
 ```
+
+> **Nota:** O `executar_coleta.bat` define `PGCLIENTENCODING=UTF8` e `PGLANG=C` para garantir compatibilidade com Python 3.13 no Windows PT-BR.
 
 ### 7.2 APScheduler (in-process — backup)
 
@@ -212,6 +221,16 @@ Configurado em `printers/scheduler.py` com `MemoryJobStore` (não persiste entre
 SECRET_KEY=sua-chave-secreta-aqui
 DEBUG=False
 ALLOWED_HOSTS=localhost,127.0.0.1,<IP-do-servidor>
+
+# Banco de dados — padrão SQLite (sem configuração adicional)
+# Para usar PostgreSQL, defina DB_ENGINE=postgresql e as variáveis abaixo:
+DB_ENGINE=sqlite
+# DB_ENGINE=postgresql
+# DB_NAME=painel_toner
+# DB_USER=postgres
+# DB_PASSWORD=sua-senha
+# DB_HOST=localhost
+# DB_PORT=5432
 
 # Timeouts de coleta (segundos)
 SNMP_TIMEOUT=3

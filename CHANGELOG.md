@@ -4,6 +4,21 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
 ---
 
+## [1.4.0] — 2026-06-08
+
+### Corrigido
+- `executar_coleta.bat` e `atualizar_agora.bat`: caminho `cd /d` corrigido para apontar ao diretório de produção do servidor (`C:\Pietro\Projetos\HFS_PAINEL_IMPRESSORA_TONER\HFS_PAINEL_IMPRESSORA_TONER`) em vez do diretório de desenvolvimento
+- `snmp_client.py`: adicionado `_safe_str()` para tratar `UnicodeDecodeError` em respostas SNMP de impressoras com bytes inválidos (algumas impressoras HP retornam caracteres fora do padrão UTF-8)
+- `collector.py`: proteção contra `UnicodeDecodeError` no handler de exceção do loop de coleta
+- `executar_coleta.bat`: adicionadas variáveis `PGCLIENTENCODING=UTF8` e `PGLANG=C` para compatibilidade com Python 3.13 no Windows PT-BR
+- `hfs_toner/settings.py`: banco de dados padrão alterado de PostgreSQL para **SQLite** — elimina dependência de servidor PostgreSQL e resolve incompatibilidade de encoding no Windows PT-BR com Python 3.13. PostgreSQL continua disponível via `DB_ENGINE=postgresql` no `.env`
+
+### Adicionado
+- `openpyxl` adicionado ao `requirements.txt` (estava ausente, causando falha no comando `exportar_excel`)
+- `hfs_toner/settings.py`: suporte a `DB_ENGINE` no `.env` para escolha entre `sqlite` (padrão) e `postgresql`
+
+---
+
 ## [1.3.0] — 2026-05-11
 
 ### Adicionado
