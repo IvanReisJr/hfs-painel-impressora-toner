@@ -66,6 +66,7 @@ DATABASES = {
         "PORT": config("DB_PORT", default="5432"),
         "OPTIONS": {
             "client_encoding": "UTF8",
+            "options": "-c lc_messages=C",
         },
     }
 }
