@@ -21,6 +21,14 @@ from pysnmp.hlapi.v3arch.asyncio import (
 
 logger = logging.getLogger(__name__)
 
+
+def _safe_str(obj) -> str:
+    try:
+        return str(obj)
+    except UnicodeDecodeError:
+        return repr(obj)
+
+
 _OID_LEVEL_BASE = "1.3.6.1.2.1.43.11.1.1.9.1"
 _OID_MAX_BASE = "1.3.6.1.2.1.43.11.1.1.8.1"
 
@@ -78,7 +86,7 @@ async def _fetch_async(
             )
 
             if error_indication:
-                result.error = str(error_indication)
+                result.error = _safe_str(error_indication)
                 break  # falha de rede — não adianta tentar os demais slots
             if error_status:
                 continue  # OID não existe neste slot (ex: impressora mono sem cor)
@@ -97,8 +105,8 @@ async def _fetch_async(
             result.success = True
 
     except Exception as exc:
-        result.error = str(exc)
-        logger.warning("SNMP error for %s: %s", ip, exc)
+        result.error = _safe_str(exc)
+        logger.warning("SNMP error for %s: %s", ip, type(exc).__name__)
 
     engine.close_dispatcher()
     return result

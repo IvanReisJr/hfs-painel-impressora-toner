@@ -101,14 +101,18 @@ def collect_all_active() -> list[CollectionResult]:
         try:
             results.append(collect_printer(printer))
         except Exception as exc:
-            logger.error("Unexpected error collecting %s: %s", printer.name, exc)
+            try:
+                error_str = str(exc)
+            except UnicodeDecodeError:
+                error_str = type(exc).__name__
+            logger.error("Unexpected error collecting %s: %s", printer.name, type(exc).__name__)
             results.append(
                 CollectionResult(
                     printer_id=printer.pk,
                     printer_name=printer.name,
                     success=False,
                     protocol_used="",
-                    error=str(exc),
+                    error=error_str,
                 )
             )
     return results
