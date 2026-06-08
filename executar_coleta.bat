@@ -2,6 +2,8 @@
 chcp 65001 >nul
 set PYTHONUTF8=1
 set PYTHONIOENCODING=utf-8
+set PGCLIENTENCODING=UTF8
+set PGLANG=C
 cd /d C:\Pietro\Projetos\HFS_PAINEL_IMPRESSORA_TONER\HFS_PAINEL_IMPRESSORA_TONER
 
 echo ============================================================
