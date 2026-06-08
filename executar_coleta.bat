@@ -2,7 +2,7 @@
 chcp 65001 >nul
 set PYTHONUTF8=1
 set PYTHONIOENCODING=utf-8
-cd /d C:\IvanReis\Paineis\HFS_PAINEL_IMPRESSORA_TONER
+cd /d C:\Pietro\Projetos\HFS_PAINEL_IMPRESSORA_TONER\HFS_PAINEL_IMPRESSORA_TONER
 
 echo ============================================================
 echo  HFS - Coleta Automatica de Toner
