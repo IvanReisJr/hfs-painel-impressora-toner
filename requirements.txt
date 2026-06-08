@@ -8,3 +8,4 @@ whitenoise
 python-decouple
 pytest
 pytest-django
+openpyxl
