@@ -56,20 +56,30 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "hfs_toner.wsgi.application"
 
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": config("DB_NAME", default="painel_toner"),
-        "USER": config("DB_USER", default="postgres"),
-        "PASSWORD": config("DB_PASSWORD", default="postgres"),
-        "HOST": config("DB_HOST", default="localhost"),
-        "PORT": config("DB_PORT", default="5432"),
-        "OPTIONS": {
-            "client_encoding": "UTF8",
-            "options": "-c lc_messages=C",
-        },
+_DB_ENGINE = config("DB_ENGINE", default="sqlite")
+
+if _DB_ENGINE == "postgresql":
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": config("DB_NAME", default="painel_toner"),
+            "USER": config("DB_USER", default="postgres"),
+            "PASSWORD": config("DB_PASSWORD", default="postgres"),
+            "HOST": config("DB_HOST", default="localhost"),
+            "PORT": config("DB_PORT", default="5432"),
+            "OPTIONS": {
+                "client_encoding": "UTF8",
+                "options": "-c lc_messages=C",
+            },
+        }
     }
-}
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        }
+    }
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
