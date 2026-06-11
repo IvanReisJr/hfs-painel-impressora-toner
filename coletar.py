@@ -114,7 +114,7 @@ def main():
 
     print("\n" + "=" * 70)
     print(f"Concluído em {datetime.now().strftime('%H:%M:%S,%f')[:-3]}")
-    print("✅ Status salvo em: coleta_status.json")
+    print("[OK] Status salvo em: coleta_status.json")
     print("=" * 70)
     return 0
 
