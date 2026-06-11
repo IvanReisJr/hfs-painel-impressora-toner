@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Script standalone de coleta de toner para HFS.
+r"""Script standalone de coleta de toner para HFS.
 
 Não depende de BAT ou permissões administrativas.
 
